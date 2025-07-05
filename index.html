@@ -120,11 +120,9 @@ let wakeLock = null;
 // ✅ Token de tu bot
 const TELEGRAM_BOT_TOKEN = '7463888349:AAFmUXjfbygCUGi0ibwmtfDJ1mnQLYTS2rY';
 
-// ✅ Definir el ID o nombre de usuario del grupo de Telegram
-const GROUP_CHAT_ID = '-1002761244000'; // ID del grupo
-
 // ✅ Detectar el ID del usuario desde Telegram WebApp
 Telegram.WebApp.ready();
+const user_id = Telegram.WebApp.initDataUnsafe?.user?.id || null;
 
 function toggleOpcionales() {
   opcionalFields.classList.toggle('hidden');
@@ -158,7 +156,7 @@ function sendToTelegram(payload) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      chat_id: GROUP_CHAT_ID,  // Aquí usamos GROUP_CHAT_ID,
+      chat_id: '-1002761244000',
       text: msg,
       parse_mode: 'Markdown'
     })
