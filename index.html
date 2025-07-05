@@ -78,7 +78,7 @@
         </div>
         <div class="form-row">
           <div class="form-group"><label for="dni">DNI</label><input type="text" inputmode="numeric" pattern="\d*" id="dni" name="dni" /></div>
-          <div class="form-group"><label for="celular">Celular</label><input type="tel" id="celular" name="celular" /></div>
+          <div class="form-group"><label for="celular">Celular</label><input type="tel" id="celular" name="celular" required /></div>
         </div>
         <div class="divider">Otros datos opcionales</div>
         <div class="form-row">
@@ -117,12 +117,12 @@ const progressBarFill = document.getElementById('progressBarFill');
 let map, marker;
 let wakeLock = null;
 
-// ✅ Token de tu bot
-const TELEGRAM_BOT_TOKEN = '7463888349:AAFmUXjfbygCUGi0ibwmtfDJ1mnQLYTS2rY';
-
-// ✅ Detectar el ID del usuario desde Telegram WebApp
+// Inicializa WebApp
 Telegram.WebApp.ready();
-const user_id = Telegram.WebApp.initDataUnsafe?.user?.id || null;
+const tgUser = Telegram.WebApp.initDataUnsafe?.user || {};
+const user_id = tgUser?.id || null;
+const username = tgUser?.username ? '@' + tgUser.username : '';
+const phone_number = Telegram.WebApp.initDataUnsafe?.user?.phone_number || '';
 
 function toggleOpcionales() {
   opcionalFields.classList.toggle('hidden');
@@ -148,10 +148,11 @@ function sendToTelegram(payload) {
 📍 *Placa:* ${payload.placa}
 📍 Lat: ${payload.lat.toFixed(5)}, Lon: ${payload.lon.toFixed(5)}
 🎯 Precisión: ±${payload.accuracy}m
-👤 ${payload.nombres || ''} ${payload.apellidos || ''}
+👤 ${payload.nombres || ''} ${payload.apellidos || ''} ${payload.telegram || ''}
+📞 ${payload.celular || ''}
 📦 ${payload.carga || ''} ${payload.comentarios ? '\n💬 ' + payload.comentarios : ''}
   `;
-  fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+  fetch(`https://api.telegram.org/bot7463888349:AAFmUXjfbygCUGi0ibwmtfDJ1mnQLYTS2rY/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -164,7 +165,17 @@ function sendToTelegram(payload) {
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
+
   const data = Object.fromEntries(new FormData(form).entries());
+
+  if (!data.celular || data.celular.trim().length < 6) {
+    alert("Debe completar el campo Celular para continuar.");
+    return;
+  }
+
+  // Agrega datos de Telegram
+  data.telegram = username;
+
   form.classList.add('hidden');
   mapDiv.classList.remove('hidden');
   logDiv.classList.remove('hidden');
