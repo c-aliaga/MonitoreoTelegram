@@ -2,145 +2,231 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Formulario 27 – Monitoreo GPS + Telegram</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Monitoreo GPS WebApp Telegram</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    body { font-family: sans-serif; margin: 0; padding: 0; background: #f2f2f2; }
-    form { display: grid; grid-template-columns: 1fr 1fr; gap: 1em; padding: 1em; background: white; }
-    form textarea { grid-column: 1 / -1; }
-    button, input, select, textarea { font-size: 1em; padding: 0.5em; }
-    #monitor { display: none; padding: 1em; }
-    #map { height: 200px; margin-top: 1em; }
-    #log { background: #fff; padding: 1em; margin-top: 1em; max-height: 200px; overflow-y: auto; font-size: 0.9em; }
-    #progress { height: 10px; background: #ccc; margin-top: 1em; }
-    #progress-bar { height: 100%; width: 0%; background: #4caf50; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #fff; }
+    .container { max-width: 960px; margin: 0 auto; padding: 10px; }
+    h1 { font-size: 1.6em; text-align: center; margin: 10px 0 4px; }
+    h2 { font-size: 1em; text-align: center; margin: 0 0 10px; }
+    form { display: flex; flex-direction: column; gap: 10px; }
+    .form-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .form-group { flex: 1; display: flex; flex-direction: column; min-width: 140px; }
+    .form-group.full-width { flex: 100%; }
+    label { font-size: 0.9em; margin: 6px 0 4px; }
+    input, select, textarea, button {
+      font-size: 1em; padding: 6px; border: 1px solid #ccc;
+      border-radius: 4px; width: 100%; box-sizing: border-box;
+    }
+    button { background-color: #007BFF; color: white; border: none; }
+    button:hover { background-color: #0056b3; }
+    textarea { resize: vertical; min-height: 60px; }
+    .divider { display: flex; align-items: center; text-align: center; margin: 15px 0 5px; }
+    .divider::before, .divider::after {
+      content: ""; flex: 1; border-bottom: 1px solid #ccc;
+    }
+    .divider:not(:empty)::before { margin-right: .5em; }
+    .divider:not(:empty)::after { margin-left: .5em; }
+    .hidden { display: none; }
+    #map { height: 300px; margin-top: 10px; }
+    #progressBar { width: 100%; background: #eee; border-radius: 4px; overflow: hidden; margin-top: 10px; }
+    #progressBarFill {
+      height: 20px; width: 0%; background: green;
+      color: white; text-align: center; line-height: 20px;
+    }
+    .log {
+      font-size: 0.9em; white-space: pre-wrap;
+      margin-top: 10px; background: #f4f4f4;
+      padding: 10px; border-radius: 4px;
+    }
+    @media (max-width: 768px) {
+      .form-row { flex-direction: row; flex-wrap: wrap; }
+      .form-group { flex: 0 0 48%; }
+      .form-group.full-width { flex: 0 0 100%; }
+    }
   </style>
 </head>
 <body>
-  <form id="data-form">
-    <input name="placa" placeholder="Placa del vehículo" required>
-    <input name="conductor" placeholder="Nombre del conductor" required>
-    <select name="tipo">
-      <option value="">Tipo de carga (opcional)</option>
-      <option value="Refrigerado">Refrigerado</option>
-      <option value="Seco">Seco</option>
-      <option value="Peligroso">Peligroso</option>
-    </select>
-    <textarea name="comentarios" placeholder="Comentarios (opcional)"></textarea>
-    <button type="submit">Iniciar monitoreo</button>
-  </form>
-
-  <div id="monitor">
-    <strong>Monitoreando ubicación por 10 minutos...</strong>
-    <div id="progress"><div id="progress-bar"></div></div>
-    <div id="map"></div>
-    <div id="log"></div>
+<div class="container">
+  <div id="formScreen">
+    <h1>Monitoreo de posición GPS</h1>
+    <h2>Prototipo elaborado por Carlos Aliaga</h2>
+    <p style="text-align: center; font-size: 0.6em; margin: 0 10px 10px;">
+      Este prototipo permite recibir durante 10 minutos la información de la posición del celular del conductor.
+      El conductor remite voluntariamente esta información a fin de que se monitoree su recorrido y declara que
+      la información enviada y la información monitoreada tiene carácter público.
+    </p>
+    <form id="gpsForm">
+      <div class="form-row">
+        <div class="form-group placa-group">
+          <label for="placa">Placa</label>
+          <input type="text" id="placa" name="placa" required />
+        </div>
+        <div class="form-group boton-group">
+          <label>&nbsp;</label>
+          <button type="button" onclick="toggleOpcionales()">Mostrar campos opcionales</button>
+        </div>
+      </div>
+      <div id="opcionalFields" class="hidden">
+        <div class="divider">Datos opcionales del conductor</div>
+        <div class="form-row">
+          <div class="form-group"><label for="nombres">Nombres</label><input type="text" id="nombres" name="nombres" /></div>
+          <div class="form-group"><label for="apellidos">Apellidos</label><input type="text" id="apellidos" name="apellidos" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label for="dni">DNI</label><input type="text" inputmode="numeric" pattern="\d*" id="dni" name="dni" /></div>
+          <div class="form-group"><label for="celular">Celular</label><input type="tel" id="celular" name="celular" /></div>
+        </div>
+        <div class="divider">Otros datos opcionales</div>
+        <div class="form-row">
+          <div class="form-group full-width">
+            <label for="carga">Tipo de carga transportada</label>
+            <select id="carga" name="carga">
+              <option value="">Seleccione una opción</option>
+              <option value="Contenedor">Contenedor</option>
+              <option value="Fraccionada">Fraccionada</option>
+              <option value="Granel sólido">Granel sólido</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group full-width">
+            <label for="comentarios">Comentarios</label>
+            <textarea id="comentarios" name="comentarios"></textarea>
+          </div>
+        </div>
+      </div>
+      <button type="submit">Iniciar monitoreo</button>
+    </form>
+    <div id="map" class="hidden"></div>
+    <div id="progressBar" class="hidden"><div id="progressBarFill">0%</div></div>
+    <div id="log" class="log hidden"></div>
   </div>
+</div>
 
-  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
-  <script>
-    const telegramToken = "TU_TOKEN_AQUÍ";
-    const chatId = "7289061130";
+<script>
+const form = document.getElementById('gpsForm');
+const opcionalFields = document.getElementById('opcionalFields');
+const logDiv = document.getElementById('log');
+const mapDiv = document.getElementById('map');
+const progressBar = document.getElementById('progressBar');
+const progressBarFill = document.getElementById('progressBarFill');
+let map, marker;
+let wakeLock = null;
 
-    let map, marker, watchId, wakeLock, intervalId;
-    let count = 0;
-    const maxCount = 10;
+// ✅ Token de tu bot
+const TELEGRAM_BOT_TOKEN = '7463888349:AAFmUXjfbygCUGi0ibwmtfDJ1mnQLYTS2rY';
 
-    const form = document.getElementById("data-form");
-    const monitor = document.getElementById("monitor");
-    const progressBar = document.getElementById("progress-bar");
-    const logDiv = document.getElementById("log");
+// ✅ Detectar el ID del usuario desde Telegram WebApp
+Telegram.WebApp.ready();
+const user_id = Telegram.WebApp.initDataUnsafe?.user?.id || null;
 
-    function log(text) {
-      const time = new Date().toLocaleTimeString();
-      const div = document.createElement("div");
-      div.textContent = `[${time}] ${text}`;
-      logDiv.prepend(div);
+function toggleOpcionales() {
+  opcionalFields.classList.toggle('hidden');
+}
+
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => console.log('Wake Lock liberado'));
+      console.log('Wake Lock activo');
     }
+  } catch (err) {
+    console.error('Error al solicitar Wake Lock:', err);
+  }
+}
 
-    function updateMap(lat, lng) {
-      if (!map) {
-        map = L.map("map").setView([lat, lng], 16);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
-        marker = L.marker([lat, lng]).addTo(map);
-      } else {
-        marker.setLatLng([lat, lng]);
-        map.setView([lat, lng]);
-      }
+function sendToTelegram(payload) {
+  if (!user_id) return;
+  const msg = `
+🚚 *Monitoreo GPS*
+🕒 ${new Date(payload.timestamp).toLocaleTimeString()}
+📍 *Placa:* ${payload.placa}
+📍 Lat: ${payload.lat.toFixed(5)}, Lon: ${payload.lon.toFixed(5)}
+🎯 Precisión: ±${payload.accuracy}m
+👤 ${payload.nombres || ''} ${payload.apellidos || ''}
+📦 ${payload.carga || ''} ${payload.comentarios ? '\n💬 ' + payload.comentarios : ''}
+  `;
+  fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: user_id,
+      text: msg,
+      parse_mode: 'Markdown'
+    })
+  });
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(form).entries());
+  form.classList.add('hidden');
+  mapDiv.classList.remove('hidden');
+  logDiv.classList.remove('hidden');
+  progressBar.classList.remove('hidden');
+
+  await requestWakeLock();
+
+  map = L.map('map').setView([-12.0464, -77.0428], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  let count = 0;
+  const total = 10;
+  const interval = 60000;
+
+  const updateProgress = () => {
+    const percent = Math.round(((count + 1) / total) * 100);
+    progressBarFill.style.width = percent + '%';
+    progressBarFill.textContent = percent + '%';
+  };
+
+  const trackPosition = () => {
+    if (count >= total) {
+      wakeLock?.release();
+      return;
     }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = pos.coords;
+        const payload = {
+          ...data,
+          timestamp: new Date().toISOString(),
+          lat: coords.latitude,
+          lon: coords.longitude,
+          accuracy: coords.accuracy
+        };
+        sendToTelegram(payload);
+        const msg = `[${new Date().toLocaleTimeString()}] Lat: ${coords.latitude.toFixed(5)}, Lon: ${coords.longitude.toFixed(5)}, ±${coords.accuracy}m`;
+        logDiv.textContent += msg + '\n';
 
-    async function requestWakeLock() {
-      try {
-        wakeLock = await navigator.wakeLock.request("screen");
-        wakeLock.addEventListener("release", () => log("Wake Lock liberado"));
-        log("Wake Lock activo");
-      } catch (err) {
-        log("No se pudo activar Wake Lock");
-      }
-    }
-
-    function sendToTelegram(data) {
-      const mensaje = `
-📍 *Registro de ubicación*
-🚚 Placa: ${data.placa}
-👤 Conductor: ${data.conductor}
-🕒 ${data.timestamp}
-📌 Lat: ${data.lat.toFixed(6)}, Lng: ${data.lng.toFixed(6)}
-🎯 Precisión: ±${data.accuracy}m
-📝 ${data.comentarios || "Sin comentarios"}
-      `;
-      fetch(`https://api.telegram.org/bot${telegramToken}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chatId, text: mensaje, parse_mode: "Markdown" })
-      }).then(r => log("Enviado a Telegram")).catch(e => log("Error Telegram"));
-    }
-
-    async function startMonitoring(data) {
-      requestWakeLock();
-      monitor.style.display = "block";
-      form.style.display = "none";
-      count = 0;
-
-      const sendPosition = () => {
-        navigator.geolocation.getCurrentPosition(pos => {
-          const lat = pos.coords.latitude;
-          const lng = pos.coords.longitude;
-          const accuracy = pos.coords.accuracy;
-          const timestamp = new Date().toLocaleString();
-          updateMap(lat, lng);
-          log(`Envío ${count + 1}: ${lat.toFixed(5)}, ${lng.toFixed(5)} ±${accuracy}m`);
-          sendToTelegram({ ...data, lat, lng, accuracy, timestamp });
-        }, err => {
-          log("Error obteniendo ubicación");
-        }, { enableHighAccuracy: true });
-        count++;
-        progressBar.style.width = `${(count / maxCount) * 100}%`;
-        if (count >= maxCount) {
-          clearInterval(intervalId);
-          wakeLock?.release();
-          log("Monitoreo completado");
+        if (!marker) {
+          marker = L.marker([coords.latitude, coords.longitude]).addTo(map);
+        } else {
+          marker.setLatLng([coords.latitude, coords.longitude]);
         }
-      };
+        map.setView([coords.latitude, coords.longitude], 15);
 
-      sendPosition();
-      intervalId = setInterval(sendPosition, 60000);
-    }
+        updateProgress();
+        count++;
+        if (count < total) setTimeout(trackPosition, interval);
+      },
+      (err) => {
+        logDiv.textContent += `[${new Date().toLocaleTimeString()}] Error: ${err.message}\n`;
+        if (count < total) setTimeout(trackPosition, interval);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
-    form.addEventListener("submit", e => {
-      e.preventDefault();
-      const data = Object.fromEntries(new FormData(form));
-      startMonitoring(data);
-    });
-
-    // Optional: register service worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
-    }
-  </script>
+  trackPosition();
+});
+</script>
 </body>
 </html>
