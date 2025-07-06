@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+€<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
@@ -58,7 +58,7 @@
     <h1>Monitoreo de posición GPS</h1>
     <h2>Prototipo elaborado por Carlos Aliaga</h2>
     <p style="text-align: center; font-size: 0.6em; margin: 0 10px 10px;">
-      Este prototipo (formulario 34 - con validación de permisos una sola vez y placa y gráfica de recorrido) permite recibir durante 10 minutos la información de la posición del celular del conductor.
+      Este prototipo (formulario 35 - con validación de permisos una sola vez y placa y gráfica de recorrido y wakelock al regresar a la app) permite recibir durante 10 minutos la información de la posición del celular del conductor.
       El conductor remite voluntariamente esta información a fin de que se monitoree su recorrido y declara que
       la información enviada y la información monitoreada tiene carácter público.
     </p>
@@ -243,6 +243,18 @@ async function requestWakeLock() {
     console.error('Error al solicitar Wake Lock:', err);
   }
 }
+
+//Añadido
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && 'wakeLock' in navigator) {
+    navigator.wakeLock.request('screen').then(lock => {
+      wakeLock = lock;
+    }).catch(console.error);
+  }
+});
+
+//Fin de añadido
+
 
 function sendToTelegram(payload) {
   if (!user_id) return;
