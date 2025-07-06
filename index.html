@@ -58,7 +58,7 @@
     <h1>Monitoreo de posición GPS</h1>
     <h2>Prototipo elaborado por Carlos Aliaga</h2>
     <p style="text-align: center; font-size: 0.6em; margin: 0 10px 10px;">
-      Este prototipo (formulario 31 con envío a nuevo grupo) permite recibir durante 10 minutos la información de la posición del celular del conductor.
+      Este prototipo (formulario 33 - con validación de permisos y placa y gráfica de recorrido) permite recibir durante 10 minutos la información de la posición del celular del conductor.
       El conductor remite voluntariamente esta información a fin de que se monitoree su recorrido y declara que
       la información enviada y la información monitoreada tiene carácter público.
     </p>
@@ -110,6 +110,57 @@
     <div id="log" class="log hidden"></div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const formScreen = document.getElementById('formScreen');
+
+  // Deshabilita todos los campos del formulario
+  function disableForm() {
+    formScreen.querySelectorAll('input, select, textarea, button').forEach(el => el.disabled = true);
+  }
+
+  // Vuelve a habilitarlos
+  function enableForm() {
+    formScreen.querySelectorAll('input, select, textarea, button').forEach(el => el.disabled = false);
+  }
+
+  try {
+    const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
+
+    if (permissionStatus.state === 'granted') {
+      enableForm();
+    } else if (permissionStatus.state === 'prompt') {
+      // Pide una posición para que el navegador pregunte al usuario
+      navigator.geolocation.getCurrentPosition(
+        () => enableForm(),
+        () => {
+          disableForm();
+          alert('Debes permitir el acceso a la ubicación para usar este formulario.');
+        }
+      );
+    } else {
+      disableForm();
+      alert('No se puede usar el formulario sin permisos de ubicación.');
+    }
+
+    // Si cambia el estado (por ejemplo, lo otorgan más tarde)
+    permissionStatus.onchange = () => {
+      if (permissionStatus.state === 'granted') {
+        enableForm();
+      } else {
+        disableForm();
+      }
+    };
+  } catch (e) {
+    console.error('No se pudo verificar permisos de ubicación:', e);
+    disableForm();
+    alert('Este navegador no soporta la verificación de permisos.');
+  }
+});
+</script>
+
+
 
 <script>
 const form = document.getElementById('gpsForm');
