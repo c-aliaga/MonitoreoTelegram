@@ -58,7 +58,7 @@
     <h1>Monitoreo de posición GPS</h1>
     <h2>Prototipo elaborado por Carlos Aliaga</h2>
     <p style="text-align: center; font-size: 0.6em; margin: 0 10px 10px;">
-      Este prototipo (formulario 33 - con validación de permisos y placa y gráfica de recorrido) permite recibir durante 10 minutos la información de la posición del celular del conductor.
+      Este prototipo (formulario 34 - con validación de permisos una sola vez y placa y gráfica de recorrido) permite recibir durante 10 minutos la información de la posición del celular del conductor.
       El conductor remite voluntariamente esta información a fin de que se monitoree su recorrido y declara que
       la información enviada y la información monitoreada tiene carácter público.
     </p>
@@ -125,15 +125,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     formScreen.querySelectorAll('input, select, textarea, button').forEach(el => el.disabled = false);
   }
 
+  let watchId = null;  // Para guardar el ID del seguimiento
+  let count = 0;       // Contador de actualizaciones de ubicación
+  const total = 10;    // Duración de 10 minutos (10 actualizaciones)
+  const interval = 60000; // Un minuto de intervalo
+  
+  async function startTracking() {
+    if (watchId === null) {
+      // Empezamos a ver la ubicación en tiempo real
+      watchId = navigator.geolocation.watchPosition((pos) => {
+        const coords = pos.coords;
+
+        // Aquí envías la ubicación a tu backend o Telegram
+        sendToTelegram(coords); // Asegúrate de tener esta función
+
+        // Mostrar la ubicación en el log o mapa
+        logDiv.textContent += `[${new Date().toLocaleTimeString()}] Lat: ${coords.latitude.toFixed(5)}, Lon: ${coords.longitude.toFixed(5)}, ±${coords.accuracy}m\n`;
+
+        // Incrementar contador
+        count++;
+
+        // Detener después de 10 minutos
+        if (count >= total) {
+          stopTracking();  // Detener el seguimiento después de 10 minutos
+        }
+      }, (err) => {
+        console.log('Error en la geolocalización:', err);
+      }, {
+        enableHighAccuracy: true,
+        timeout: 10000,  // Esperar hasta 10 segundos para obtener una ubicación precisa
+        maximumAge: 0    // Siempre obtener la ubicación más reciente
+      });
+    }
+  }
+
+  function stopTracking() {
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId);  // Detener el seguimiento de la ubicación
+      watchId = null;  // Restablecer el ID de seguimiento
+      logDiv.textContent += "✅ Monitoreo finalizado.\n";  // Mensaje al finalizar
+    }
+  }
+
   try {
     const permissionStatus = await navigator.permissions.query({ name: 'geolocation' });
 
     if (permissionStatus.state === 'granted') {
       enableForm();
+      startTracking(); // Iniciar el monitoreo cuando los permisos estén otorgados
     } else if (permissionStatus.state === 'prompt') {
       // Pide una posición para que el navegador pregunte al usuario
       navigator.geolocation.getCurrentPosition(
-        () => enableForm(),
+        () => {
+          enableForm();
+          startTracking(); // Iniciar el monitoreo después de que se otorgue el permiso
+        },
         () => {
           disableForm();
           alert('Debes permitir el acceso a la ubicación para usar este formulario.');
@@ -148,8 +194,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     permissionStatus.onchange = () => {
       if (permissionStatus.state === 'granted') {
         enableForm();
+        startTracking();  // Iniciar el monitoreo cuando los permisos sean otorgados
       } else {
         disableForm();
+        stopTracking();   // Detener el monitoreo si los permisos se revocan
       }
     };
   } catch (e) {
@@ -159,8 +207,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 </script>
-
-
 
 <script>
 const form = document.getElementById('gpsForm');
