@@ -57,8 +57,8 @@
   <div id="formScreen">
     <h1>Monitoreo de posición GPS</h1>
     <h2>Prototipo elaborado por Carlos Aliaga</h2>
-    <p style="text-align: center; font-size: 0.6em; margin: 0 10px 10px;">
-      Este prototipo (formulario 35 - con validación de permisos una sola vez y placa y gráfica de recorrido y wakelock al regresar a la app) permite recibir durante 10 minutos la información de la posición del celular del conductor.
+    <p 6tyle="text-align: center; font-size: 0.6em; margin: 0 10px 10px;">
+      Este prototipo (formulario 36 - con validación de permisos una sola vez y placa y gráfica de recorrido y wakelock al regresar a la app) permite realizar 40 monitoreos, intentando hacerlo cada 30 segundos) la información de la posición del celular del conductor.
       El conductor remite voluntariamente esta información a fin de que se monitoree su recorrido y declara que
       la información enviada y la información monitoreada tiene carácter público.
     </p>
@@ -127,8 +127,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let watchId = null;  // Para guardar el ID del seguimiento
   let count = 0;       // Contador de actualizaciones de ubicación
-  const total = 10;    // Duración de 10 minutos (10 actualizaciones)
-  const interval = 60000; // Un minuto de intervalo
+  const total = 40;    // Duración de 10 minutos (10 actualizaciones) / Ahora es 40 actualizaciones
+  const interval = 30000; // Un minuto de intervalo / Ahora es 30 segundos
   
   async function startTracking() {
     if (watchId === null) {
