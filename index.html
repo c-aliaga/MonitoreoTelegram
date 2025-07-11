@@ -58,7 +58,7 @@
     <h1>Monitoreo de posición GPS</h1>
     <h2>Prototipo elaborado por Carlos Aliaga</h2>
     <p style="text-align: center; font-size: 0.6em; margin: 0 10px 10px;">
-      Este prototipo (formulario 36a - con wakelock al regresar a la app y sin duplicación de count, total e interval) permite realizar 40 monitoreos, intentando hacerlo cada 30 segundos) la información de la posición del celular del conductor. la información de la posición del celular del conductor.
+      Este prototipo (formulario 36v - con wakelock al regresar a la app y duplicación de count, total e interval) permite realizar 40 monitoreos, intentando hacerlo cada 30 segundos) la información de la posición del celular del conductor. la información de la posición del celular del conductor.
       El conductor remite voluntariamente esta información a fin de que se monitoree su recorrido y declara que
       la información enviada y la información monitoreada tiene carácter público.
     </p>
@@ -311,9 +311,9 @@ form.addEventListener('submit', async (e) => {
     attribution: '© OpenStreetMap contributors'
   }).addTo(map);
 
-  // let count = 0;
-  // const total = 40;
-  // const interval = 30000;
+  let count = 0;
+  const total = 40;
+  const interval = 30000;
 
   const updateProgress = () => {
     const percent = Math.round(((count + 1) / total) * 100);
